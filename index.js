@@ -122,26 +122,57 @@ function generatePublicKey(privateKey, g, P) {
   return modPow(g, privateKey, P);
 }
 
-async function main() {
-  const P = await generateSafePrime(512);
-  const [g, q] = generateGenerator(P);
-  const privAlice = generatePrivateKey(q);
-  const privBob = generatePrivateKey(q);
-  const pubAlice = generatePublicKey(privAlice, g, P);
-  const pubBob = generatePublicKey(privBob, g, P);
-  console.log("P:", P.toString());
-  console.log("q:", q.toString());
-  console.log("g:", g.toString());
-  console.log("privAlice:", privAlice.toString());
-  console.log("privBob:", privBob.toString());
-  console.log("pubAlice:", pubAlice.toString());
-  console.log("pubBob:", pubBob.toString());
+function bigIntToBuffer(bn) {
+  let hex = bn.toString(16);
+  if (hex.length % 2) hex = '0' + hex;
+  return Buffer.from(hex, 'hex');
+}
 
-  const sharedAlice = modPow(pubBob, privAlice, P);
-  const sharedBob = modPow(pubAlice, privBob, P);
-  console.log("Shared secret (Alice):", sharedAlice.toString());
-  console.log("Shared secret (Bob):", sharedBob.toString());
-  console.log("Secrets match?", sharedAlice === sharedBob);
+function deriveKey(seed, info = "default", keyLen = 32) {
+  return Buffer.from(crypto.hkdfSync(
+    "sha256",        
+    seed,           
+    Buffer.alloc(0),              
+    Buffer.from(info),  
+    keyLen            
+  ));
+}
+
+async function main() {
+    const P = await generateSafePrime(512);
+    const [g, q] = generateGenerator(P);
+    const privAlice = generatePrivateKey(q);
+    const privBob = generatePrivateKey(q);
+    const pubAlice = generatePublicKey(privAlice, g, P);
+    const pubBob = generatePublicKey(privBob, g, P);
+    console.log("P:", P.toString());
+    console.log("q:", q.toString());
+    console.log("g:", g.toString());
+    console.log("privAlice:", privAlice.toString());
+    console.log("privBob:", privBob.toString());
+    console.log("pubAlice:", pubAlice.toString());
+    console.log("pubBob:", pubBob.toString());
+
+    const sharedAlice = modPow(pubBob, privAlice, P);
+    const sharedBob = modPow(pubAlice, privBob, P);
+    console.log("Shared secret (Alice):", sharedAlice.toString());
+    console.log("Shared secret (Bob):", sharedBob.toString());
+    console.log("Secrets match?", sharedAlice === sharedBob);
+
+    const sharedSecretBufferAlice = bigIntToBuffer(sharedAlice);
+    const sharedSecretBufferBob = bigIntToBuffer(sharedBob);
+
+    const encryptionKeyAlice = deriveKey(sharedSecretBufferAlice, "encryption");
+    const hmacKeyAlice = deriveKey(sharedSecretBufferAlice, "authentication");
+    const encryptionKeyBob = deriveKey(sharedSecretBufferBob, "encryption");
+    const hmacKeyBob = deriveKey(sharedSecretBufferBob, "authentication");
+
+    console.log("Alice's Encryption Key: ", encryptionKeyAlice.toString('hex'));
+    console.log("Bob's Encryption Key: ", encryptionKeyBob.toString('hex'));
+    console.log("Alice and Bob Encryption Key Match: ", encryptionKeyAlice.equals(encryptionKeyBob));
+    console.log("Alice's HMAC Key: ", hmacKeyAlice.toString('hex'));
+    console.log("Bob's HMAC Key: ", hmacKeyBob.toString('hex'));
+    console.log("Alice and Bob HMAC Key Match: ", hmacKeyAlice.equals(hmacKeyBob));
 }
 
 main();
