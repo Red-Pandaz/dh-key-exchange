@@ -84,9 +84,32 @@ async function generateSafePrime(bits = 512){
     }
 }
 
-
-async function main(){
-const P = await generateSafePrime(512);
-console.log("P (safe prime: ", P.toString());
+function isGenerator(g, P, q) {
+  return modPow(g, q, P) === 1n;
 }
+
+async function main() {
+    const P = await generateSafePrime(512);
+    console.log("P (safe prime):", P.toString());
+    let foundG = false;
+    const q = (P - 1n) / 2n;
+    const maxAttempts = 1000;
+    let attempts = 0;
+
+    while (!foundG && attempts < maxAttempts) {
+        const g = randomBigIntBetween(2n, P - 2n);
+        if (isGenerator(g, P, q)) {
+            console.log(`${g} is a generator of the subgroup`);
+            foundG = true;
+        } else {
+            console.log(`${g} is NOT a generator, try another g`);
+            attempts++;
+        }
+    }
+
+if (!foundG) {
+  console.log(`Failed to find generator after ${maxAttempts} attempts.`);
+}
+}
+
 main();
