@@ -14,6 +14,7 @@ function randomBigIntBetween(min, max) {
   } while (random >= range);
   return random + min;
 }
+
 function randomBigInt(bits) {
   const bytes = Math.ceil(bits / 8);
   const buffer = crypto.randomBytes(bytes);
@@ -28,6 +29,7 @@ function randomBigInt(bits) {
 
   return bigint;
 }
+
 function isProbablePrime(n, k = 5) {
   if (n === 2n || n === 3n) return true;
   if (n < 2n || n % 2n === 0n) return false;
@@ -72,12 +74,19 @@ async function generatePrime(bits = 512) {
   }
 }
 
-
-async function main(){
-const P = await generatePrime(512).then(prime => {
-  return prime;
-});
-  console.log("P value: ", P.toString());
+async function generateSafePrime(bits = 512){
+    while(true) {
+        const q = await generatePrime(bits - 1);
+        const P = 2n * q + 1n;
+        if (isProbablePrime(P)){
+            return P;
+        }
+    }
 }
 
+
+async function main(){
+const P = await generateSafePrime(512);
+console.log("P (safe prime: ", P.toString());
+}
 main();
