@@ -79,37 +79,71 @@ async function generateSafePrime(bits = 512){
         const q = await generatePrime(bits - 1);
         const P = 2n * q + 1n;
         if (isProbablePrime(P)){
+            console.log("P (safe prime):", P.toString());
             return P;
         }
     }
 }
 
 function isGenerator(g, P, q) {
-  return modPow(g, q, P) === 1n;
+  if (modPow(g, q, P) !== 1n) return false;
+  if (modPow(g, 2n, P) === 1n) return false;
+  return true;
 }
 
-async function main() {
-    const P = await generateSafePrime(512);
-    console.log("P (safe prime):", P.toString());
+function generateGenerator(_P){
     let foundG = false;
-    const q = (P - 1n) / 2n;
+    const q = (_P - 1n) / 2n;
     const maxAttempts = 1000;
     let attempts = 0;
 
     while (!foundG && attempts < maxAttempts) {
-        const g = randomBigIntBetween(2n, P - 2n);
-        if (isGenerator(g, P, q)) {
+        const g = randomBigIntBetween(2n, _P - 2n);
+        if (isGenerator(g, _P, q)) {
             console.log(`${g} is a generator of the subgroup`);
             foundG = true;
+            return [g, q]
         } else {
             console.log(`${g} is NOT a generator, try another g`);
             attempts++;
         }
     }
 
-if (!foundG) {
-  console.log(`Failed to find generator after ${maxAttempts} attempts.`);
+    if (!foundG) {
+        throw new Error(`Failed to find generator after ${maxAttempts} attempts.`);
+    }
 }
+
+function generatePrivateKey(_q) {
+
+  return randomBigIntBetween(1n, _q - 1n);
+}
+
+function generatePublicKey(privateKey, g, P) {
+  return modPow(g, privateKey, P);
+}
+
+async function main() {
+    const P = await generateSafePrime(512);
+    const [g, q] = generateGenerator(P);
+    const privAlice = generatePrivateKey(q);
+    const privBob = generatePrivateKey(q);
+    const pubAlice = generatePublicKey(privAlice, g, P);
+    const pubBob = generatePublicKey(privBob, g, P)
+    console.log("P:", P.toString());
+    console.log("q:", q.toString());
+    console.log("g:", g.toString());
+    console.log("privAlice:", privAlice.toString());
+    console.log("privBob:", privBob.toString());
+    console.log("pubAlice:", pubAlice.toString());
+    console.log("pubBob:", pubBob.toString());
+
+    // Compute shared secrets and verify they match
+    const sharedAlice = modPow(pubBob, privAlice, P);
+    const sharedBob = modPow(pubAlice, privBob, P);
+    console.log("Shared secret (Alice):", sharedAlice.toString());
+    console.log("Shared secret (Bob):", sharedBob.toString());
+    console.log("Secrets match?", sharedAlice === sharedBob);
 }
 
 main();
