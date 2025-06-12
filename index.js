@@ -53,7 +53,7 @@ function isProbablePrime(n, k = 5) {
     while (d % 2n === 0n) {
         d /= 2n;
         s += 1n;
-  }
+    }
 
     // WitnessLoop for Miller-Rabin primality test
     WitnessLoop: for (let i = 0n; i < k; i++) {
@@ -69,14 +69,14 @@ function isProbablePrime(n, k = 5) {
 
         // Otherwise, square x up to s-1
         for (let r = 1n; r < s; r++) {
-        x = modPow(x, 2n, n);
-        if (x === n - 1n) continue WitnessLoop;
+            x = modPow(x, 2n, n);
+            if (x === n - 1n) continue WitnessLoop;
         }
 
         // Composite detected
         return false;
     }
-    
+
     //Probably prime
     return true;
 }
@@ -111,10 +111,10 @@ async function generateSafePrime(bits = 512) {
         const q = await generatePrime(bits - 1);
         const P = 2n * q + 1n;
         if (isProbablePrime(P)) {
-        console.log("P (safe prime):", P.toString());
-        return P;
+            console.log("P (safe prime):", P.toString());
+            return P;
+        }
     }
-  }
 }
 
 // Verifies if g is a generator of the prime-order subgroup of size q in Z_P*
@@ -126,7 +126,7 @@ function isGenerator(g, P, q) {
 }
 
 // Randomly tries values between 2 and P - 2 until it finds a valid generator g
-// for the subgroup of order q in ℤ_P*. Tries up to maxAttempts before failing
+// for the subgroup of order q in Z_P*. Tries up to maxAttempts before failing
 function generateGenerator(_P) {
     let foundG = false;
     const q = (_P - 1n) / 2n;
@@ -136,12 +136,12 @@ function generateGenerator(_P) {
     while (!foundG && attempts < maxAttempts) {
         const g = randomBigIntBetween(2n, _P - 2n);
         if (isGenerator(g, _P, q)) {
-        console.log(`${g} is a generator of the subgroup`);
-        foundG = true;
-        return [g, q];
+            console.log(`${g} is a generator of the subgroup`);
+            foundG = true;
+            return [g, q];
         } else {
-        console.log(`${g} is NOT a generator, try another g`);
-        attempts++;
+            console.log(`${g} is NOT a generator, try another g`);
+            attempts++;
         }
     }
 
@@ -153,33 +153,33 @@ function generateGenerator(_P) {
 // Generates a random private key in the range [1, q - 1]
 // This key should remain secret and is used to derive the public key
 function generatePrivateKey(_q) {
-  return randomBigIntBetween(1n, _q - 1n);
+    return randomBigIntBetween(1n, _q - 1n);
 }
 
 // Computes the public key as g^privateKey mod P
 // This can be safely shared to compute a shared secret with another party
 function generatePublicKey(privateKey, g, P) {
-  return modPow(g, privateKey, P);
+    return modPow(g, privateKey, P);
 }
 
 // Converts a BigInt into a Buffer for compatibility with crypto operations like HKDF
 // Pads with a zero byte if needed to ensure even-length hex
 function bigIntToBuffer(bn) {
-  let hex = bn.toString(16);
-  if (hex.length % 2) hex = '0' + hex;
-  return Buffer.from(hex, 'hex');
+    let hex = bn.toString(16);
+    if (hex.length % 2) hex = '0' + hex;
+    return Buffer.from(hex, 'hex');
 }
 
 // Derives a fixed-length cryptographic key from a shared secret using HKDF (SHA-256)
 // This is used to turn a Diffie-Hellman shared secret into usable symmetric keys
 function deriveKey(seed, info = "default", keyLen = 32) {
-  return Buffer.from(crypto.hkdfSync(
-    "sha256",        
-    seed,           
-    Buffer.alloc(0),              
-    Buffer.from(info),  
-    keyLen            
-  ));
+    return Buffer.from(crypto.hkdfSync(
+        "sha256",
+        seed,
+        Buffer.alloc(0),
+        Buffer.from(info),
+        keyLen
+    ));
 }
 
 // Generates and prints required variables
