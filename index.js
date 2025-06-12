@@ -55,7 +55,7 @@ function isProbablePrime(n, k = 5) {
         s += 1n;
   }
 
-    // WitnessLoop for Miller-Rabin primality test. 
+    // WitnessLoop for Miller-Rabin primality test
     WitnessLoop: for (let i = 0n; i < k; i++) {
 
         // Generate a random base
@@ -81,7 +81,8 @@ function isProbablePrime(n, k = 5) {
     return true;
 }
 
-// Helper function for determining the modulus of an exponentiated base
+// Efficiently computes (base^exp) mod mod using exponentiation by squaring
+// This is essential for modular arithmetic in cryptographic operations
 function modPow(base, exp, mod) {
     let result = 1n;
     base = base % mod;
@@ -93,6 +94,9 @@ function modPow(base, exp, mod) {
     return result;
 }
 
+// Continuously generates random odd BigInts of the given bit size
+// until one passes the Miller-Rabin primality test
+// Returns a probable prime (not cryptographically guaranteed without more checks)
 async function generatePrime(bits = 512) {
     while (true) {
         const candidate = randomBigInt(bits);
@@ -100,6 +104,8 @@ async function generatePrime(bits = 512) {
     }
 }
 
+// Generates a "safe prime" P such that P = 2q + 1, where both P and q are prime
+// Safe primes are used in cryptography to ensure strong subgroup structure
 async function generateSafePrime(bits = 512) {
     while (true) {
         const q = await generatePrime(bits - 1);
@@ -111,12 +117,16 @@ async function generateSafePrime(bits = 512) {
   }
 }
 
+// Verifies if g is a generator of the prime-order subgroup of size q in Z_P*
+// Ensures that g^q ≡ 1 mod P (required) and g^2 != 1 mod P (to avoid trivial subgroup)
 function isGenerator(g, P, q) {
     if (modPow(g, q, P) !== 1n) return false;
     if (modPow(g, 2n, P) === 1n) return false;
     return true;
 }
 
+// Randomly tries values between 2 and P - 2 until it finds a valid generator g
+// for the subgroup of order q in ℤ_P*. Tries up to maxAttempts before failing
 function generateGenerator(_P) {
     let foundG = false;
     const q = (_P - 1n) / 2n;
@@ -140,24 +150,28 @@ function generateGenerator(_P) {
     }
 }
 
-// Generates random private key based on q value
+// Generates a random private key in the range [1, q - 1]
+// This key should remain secret and is used to derive the public key
 function generatePrivateKey(_q) {
   return randomBigIntBetween(1n, _q - 1n);
 }
 
-// Derives public key based on private key, g and P
+// Computes the public key as g^privateKey mod P
+// This can be safely shared to compute a shared secret with another party
 function generatePublicKey(privateKey, g, P) {
   return modPow(g, privateKey, P);
 }
 
-
+// Converts a BigInt into a Buffer for compatibility with crypto operations like HKDF
+// Pads with a zero byte if needed to ensure even-length hex
 function bigIntToBuffer(bn) {
   let hex = bn.toString(16);
   if (hex.length % 2) hex = '0' + hex;
   return Buffer.from(hex, 'hex');
 }
 
-// Function for derifying various keys from a sweed using crypto.hkdfSync
+// Derives a fixed-length cryptographic key from a shared secret using HKDF (SHA-256)
+// This is used to turn a Diffie-Hellman shared secret into usable symmetric keys
 function deriveKey(seed, info = "default", keyLen = 32) {
   return Buffer.from(crypto.hkdfSync(
     "sha256",        
